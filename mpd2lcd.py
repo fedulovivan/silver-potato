@@ -49,8 +49,8 @@ pp = pprint.PrettyPrinter(indent=4)
 # gpio pin setup
 def gpio_setup():
   GPIO.setmode(GPIO.BCM)
-  GPIO.setup(BTN_PIN, GPIO.IN, pull_up_down = GPIO.PUD_DOWN)
-  GPIO.add_event_detect(BTN_PIN, GPIO.RISING, callback=button_handler, bouncetime=200)
+  GPIO.setup(BTN_PIN, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+  GPIO.add_event_detect(BTN_PIN, GPIO.FALLING, callback=button_handler, bouncetime=200)
 
 def button_handler(pin_num):
   print("Button pressed")
