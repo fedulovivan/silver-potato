@@ -10,9 +10,14 @@ import pprint
 import math
 import RPi.GPIO as GPIO
 from threading import Thread
+import logging
 
-# gpio pin, button is connected
-BTN_PIN = 23
+# gpio pins, test buttons are connected
+BTN_1 = 23
+BTN_2 = 24
+BTN_3 = 25
+BTN_4 = 26
+BUTTON_PINS = [BTN_1, BTN_2, BTN_3, BTN_4]
 
 # Define some device parameters
 I2C_ADDR  = 0x27 # I2C device address
@@ -36,6 +41,10 @@ ENABLE = 0b00000100 # Enable bit
 E_PULSE = 0.0005
 E_DELAY = 0.0005
 
+# configure logging
+log = logging.getLogger('silverp')
+log.basicConfig(filename='mpd2lcd.log', format='%(asctime)s %(message)s', level=log.DEBUG)
+
 #Open I2C interface
 bus = smbus.SMBus(1)
 
@@ -48,27 +57,51 @@ pp = pprint.PrettyPrinter(indent=4)
 
 # gpio pin setup
 def gpio_setup():
+  log.info('GPIO set BCM mode')
   GPIO.setmode(GPIO.BCM)
-  GPIO.setup(BTN_PIN, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-  GPIO.add_event_detect(BTN_PIN, GPIO.FALLING, callback=button_handler, bouncetime=200)
+  for pin_num in BUTTON_PINS:
+    GPIO.setup(pin_num, GPIO.IN, pull_up_down = GPIO.PUD_UP)
+    print 'GPIO pin {0} set as IN and pulled up'.format(pin_num)
+    GPIO.add_event_detect(pin_num, GPIO.FALLING, callback=btn_handler, bouncetime=300)
+    print 'GPIO pin {0} registered callback on FALLING'.format(pin_num)
 
-def button_handler(pin_num):
-  print("Button pressed")
+def btn_handler(pin_num):
+  print 'GPIO pin {0} button pressed'.format(pin_num)
   stat = client.status()
   state = stat.get("state")
-  if state == "stop":
-    client.play()
-  else:  
-    client.next()
+  print 'mpd current state={0}'.format(state)
+  if pin_num == BTN_1:
+    if state == 'stop' or state == 'pause':
+      print 'do play'
+      client.play()
+    elif state == 'play':
+      print 'do pause'
+      client.pause()
+  elif pin_num == BTN_2:
+    if state != 'play':
+      print 'do play'
+      client.play()
+    client.next()  
+    print 'do next'
+  elif pin_num == BTN_3:
+    if state != 'play':
+      print 'do play'
+      client.play()
+    client.previous()  
+    print 'do prev'
+  elif pin_num == BTN_4:
+    print 'do power off'
+  else:
+    print 'unexpected pin {0} in btn_handler'.format(pin_num)
 
 def lcd_init():
   # Initialise display
-  lcd_byte(0x33,LCD_CMD) # 110011 Initialise
-  lcd_byte(0x32,LCD_CMD) # 110010 Initialise
-  lcd_byte(0x06,LCD_CMD) # 000110 Cursor move direction
-  lcd_byte(0x0C,LCD_CMD) # 001100 Display On,Cursor Off, Blink Off 
-  lcd_byte(0x28,LCD_CMD) # 101000 Data length, number of lines, font size
-  lcd_byte(0x01,LCD_CMD) # 000001 Clear display
+  lcd_byte(0x33, LCD_CMD) # 110011 Initialise
+  lcd_byte(0x32, LCD_CMD) # 110010 Initialise
+  lcd_byte(0x06, LCD_CMD) # 000110 Cursor move direction
+  lcd_byte(0x0C, LCD_CMD) # 001100 Display On,Cursor Off, Blink Off 
+  lcd_byte(0x28, LCD_CMD) # 101000 Data length, number of lines, font size
+  lcd_byte(0x01, LCD_CMD) # 000001 Clear display
   #time.sleep(E_DELAY)
 
 def lcd_byte(bits, mode):
