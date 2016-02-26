@@ -11,6 +11,7 @@ import math
 import RPi.GPIO as GPIO
 from threading import Thread
 import logging
+import os
 
 # gpio pins, test buttons are connected
 BTN_1 = 23
@@ -46,7 +47,16 @@ pp = pprint.PrettyPrinter(indent=4)
 
 # configure logging
 log = logging.getLogger('silver-potato')
-fh = logging.FileHandler('debug.log')
+fh = logging.FileHandler(
+  os.path.join(
+    os.path.dirname(
+      os.path.realpath(
+        __file__
+      )
+    ),
+    'debug.log'
+  )
+)
 fh.setFormatter(
   logging.Formatter(
     "%(asctime)s: %(levelname)s: %(message)s"
